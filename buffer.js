@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import fetch from 'node-fetch';
 
 export async function pushToBufferQueue(drafts) {
   const accessToken = process.env.BUFFER_ACCESS_TOKEN;
@@ -6,28 +7,27 @@ export async function pushToBufferQueue(drafts) {
 
   if (!accessToken || !profileId) {
     console.warn("BUFFER_ACCESS_TOKEN or BUFFER_PROFILE_ID not set. Skipping Buffer push.");
-    console.log("Generated Drafts:", drafts);
     return;
   }
 
+  // Modern Buffer API Endpoint
   const url = "https://api.bufferapp.com/1/updates/create.json";
 
   for (const draft of drafts) {
     try {
-      console.log(`Pushing draft to Buffer queue...`);
+      console.log(`Pushing draft to Buffer queue (Modern Auth)...`);
       
-      const params = new URLSearchParams();
-      params.append('text', draft);
-      params.append('profile_ids[]', profileId);
-      params.append('access_token', accessToken);
-      params.append('shorten', 'false');
-
       const response = await fetch(url, {
         method: 'POST',
         headers: {
+          'Authorization': `Bearer ${accessToken}`,
           'Content-Type': 'application/x-www-form-urlencoded'
         },
-        body: params
+        body: new URLSearchParams({
+          'text': draft,
+          'profile_ids[]': profileId,
+          'shorten': 'false'
+        })
       });
 
       const result = await response.json();
