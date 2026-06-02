@@ -7,11 +7,12 @@ import { pushToBufferQueue } from './buffer.js';
 import { captureScreenshots } from './visualAlpha.js';
 
 async function runPipeline() {
-  // Add random jitter (0-20 minutes) to avoid robotic 0-minute marks
-  const jitterMinutes = Math.floor(Math.random() * 20);
-  console.log(`[${new Date().toISOString()}] Pipeline triggered. Adding ${jitterMinutes}m jitter...`);
-  
-  await new Promise(resolve => setTimeout(resolve, jitterMinutes * 60 * 1000));
+  // Add small random jitter (0-5 minutes) to avoid being exactly on the mark
+  const jitterMinutes = Math.floor(Math.random() * 5);
+  if (jitterMinutes > 0) {
+    console.log(`[${new Date().toISOString()}] Adding ${jitterMinutes}m jitter to maintain non-robotic pattern...`);
+    await new Promise(resolve => setTimeout(resolve, jitterMinutes * 60 * 1000));
+  }
 
   console.log(`[${new Date().toISOString()}] Starting Solana Content Pipeline...`);
   try {
@@ -50,15 +51,38 @@ async function runPipeline() {
   }
 }
 
-// Schedule: Every 4 hours (0 */4 * * *)
-// NOTE: 6 runs/day * 7 posts = 42 posts/day (294/week). 
-// This will exceed a 100 posts/week Buffer limit quickly.
-cron.schedule('0 */4 * * *', () => {
-  runPipeline();
+// Scheduled Times (New York Time converted to UTC)
+// 8:45 AM NY -> 12:45 UTC
+// 10:30 AM NY -> 14:30 UTC
+// 12:15 PM NY -> 16:15 UTC
+// 2:00 PM NY -> 18:00 UTC
+// 3:45 PM NY -> 19:45 UTC
+// 5:30 PM NY -> 21:30 UTC
+// 7:15 PM NY -> 23:15 UTC
+// 9:00 PM NY -> 01:00 UTC
+// 10:45 PM NY -> 02:45 UTC
+
+const schedules = [
+  '45 12 * * *',
+  '30 14 * * *',
+  '15 16 * * *',
+  '00 18 * * *',
+  '45 19 * * *',
+  '30 21 * * *',
+  '15 23 * * *',
+  '00 01 * * *',
+  '45 02 * * *'
+];
+
+schedules.forEach(s => {
+  cron.schedule(s, () => {
+    console.log(`Triggering scheduled run for cron: ${s}`);
+    runPipeline();
+  });
 });
 
 console.log("Solana Content Pipeline (Buffer Edition) initialized.");
-console.log("Scheduled to run roughly every 4 hours with random jitter.");
+console.log("Specific high-frequency schedule set (105-minute intervals).");
 
-// Immediate execution on start
+// Immediate execution as requested ("push now")
 runPipeline();
