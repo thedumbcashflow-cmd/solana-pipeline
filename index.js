@@ -7,6 +7,12 @@ import { pushToBufferQueue } from './buffer.js';
 import { captureScreenshots } from './visualAlpha.js';
 
 async function runPipeline() {
+  // Add random jitter (0-20 minutes) to avoid robotic 0-minute marks
+  const jitterMinutes = Math.floor(Math.random() * 20);
+  console.log(`[${new Date().toISOString()}] Pipeline triggered. Adding ${jitterMinutes}m jitter...`);
+  
+  await new Promise(resolve => setTimeout(resolve, jitterMinutes * 60 * 1000));
+
   console.log(`[${new Date().toISOString()}] Starting Solana Content Pipeline...`);
   try {
     // 1. Fetch Market Data
@@ -44,13 +50,15 @@ async function runPipeline() {
   }
 }
 
-// Schedule: Every 12 hours (0 */12 * * *) to hit ~100 posts per week target
-cron.schedule('0 */12 * * *', () => {
+// Schedule: Every 4 hours (0 */4 * * *)
+// NOTE: 6 runs/day * 7 posts = 42 posts/day (294/week). 
+// This will exceed a 100 posts/week Buffer limit quickly.
+cron.schedule('0 */4 * * *', () => {
   runPipeline();
 });
 
 console.log("Solana Content Pipeline (Buffer Edition) initialized.");
-console.log("Scheduled to run every 12 hours (14 posts per day).");
+console.log("Scheduled to run roughly every 4 hours with random jitter.");
 
 // Immediate execution on start
 runPipeline();
